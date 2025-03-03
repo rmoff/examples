@@ -1,0 +1,9 @@
+[source,bash]
+----
+docker compose up
+----
+
+[source,shell]
+----
+docker compose exec -it jobmanager bash -c "./bin/sql-client.sh"
+----
