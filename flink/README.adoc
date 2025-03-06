@@ -1,0 +1,14 @@
+= Apache Flink - Docker Compose for running Flink SQL
+rmoff <https://bsky.app/profile/rmoff.net>
+:date: 2025-03-06
+
+Just a straight-up Flink 1.20 Docker Compose.
+
+Launch:
+
+[source,bash]
+----
+docker compose down && \
+docker compose up -d && \
+docker compose exec -it jobmanager bash -c "./bin/sql-client.sh"
+----

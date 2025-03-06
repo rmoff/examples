@@ -1,0 +1,35 @@
+---
+services:
+  jobmanager:
+    build: 
+      context: flink
+      dockerfile: Dockerfile
+    hostname: jobmanager
+    container_name: jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+    - |
+      FLINK_PROPERTIES=
+      jobmanager.rpc.address: jobmanager
+      rest.flamegraph.enabled: true
+    volumes:
+      - $PWD/data:/data
+  taskmanager:
+    build: 
+      context: flink
+      dockerfile: Dockerfile
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    deploy:
+      replicas: 2
+    environment:
+    - |
+      FLINK_PROPERTIES=
+      jobmanager.rpc.address: jobmanager
+      taskmanager.numberOfTaskSlots: 4
+    volumes:
+      - $PWD/data:/data
+
