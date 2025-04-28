@@ -133,10 +133,12 @@ Add an order:
 
 [source,sql]
 ----
-INSERT INTO orders (customer_id, total_amount, status, shipping_address, payment_method) VALUES (1001, 149.99, 'pending', '221B Baker Street, London', 'Credit Card');
+INSERT INTO orders (customer_id, total_amount, status, created_at, shipping_address, payment_method) VALUES (1001, 149.99, 'pending', '2025-04-25 09:44:25', '221B Baker Street, London', 'Credit Card');
 ----
 
 === Set up CDC
+
+In Flink SQL client:
 
 [source,sql]
 ----
@@ -182,9 +184,10 @@ Flink SQL> SELECT * FROM orders_cdc;
 
 Insert a row in Postgres:
 
-[source,sql]
+[source,bash]
 ----
-INSERT INTO orders (customer_id, total_amount, status, shipping_address, payment_method) VALUES (1003, 199.50, 'pending', '177A Bleecker Street, New York', 'Debit Card');
+docker compose exec -it postgres psql -h localhost -p 5432 -U postgres \
+    -c "INSERT INTO orders (customer_id, total_amount, status, created_at, shipping_address, payment_method) VALUES (1003, 199.50, 'pending', '2025-04-25 09:44:28', '177A Bleecker Street, New York', 'Debit Card');"
 ----
 
 Flink table shows the new row:
@@ -232,6 +235,10 @@ Check the Kafka topic `orders_cdc` has been written to:
 [source,bash]
 ----
 docker compose exec -it kcat kcat -b broker:9092 -L
+----
+
+[source,]
+----
 Metadata for all topics (from broker 1: broker:9092/1):
  1 brokers:
   broker 1 at broker:9092 (controller)
@@ -250,7 +257,10 @@ docker compose exec -it kcat kcat -b broker:9092 -C -t orders_cdc -c -u -f '\n\t
 \tPartition: %p
 \tOffset: %o
 \tHeaders: %h\n'
+----
 
+[source,]
+----
         Key (14 bytes): {"order_id":1}
         Value (209 bytes): {"order_id":1,"customer_id":1001,"total_amount":149.99,"status":"pending","created_at":"2025-04-11 11:15:38.301","shipped_at":null,"shipping_address":"221B Baker Street, London","payment_method":"Credit Card"}
         Timestamp: 1744371275207
@@ -271,9 +281,10 @@ docker compose exec -it kcat kcat -b broker:9092 -C -t orders_cdc -c -u -f '\n\t
 
 Write a new row to Postgres:
 
-[source,sql]
+[source,bash]
 ----
-INSERT INTO orders (customer_id, total_amount, status, shipped_at, shipping_address, payment_method) VALUES (1005, 42.00, 'delivered', '2025-04-09 09:15:00', '12 Grimmauld Place, London', 'Bank Transfer');
+docker compose exec -it postgres psql -h localhost -p 5432 -U postgres \
+    -c "INSERT INTO orders (customer_id, total_amount, status, created_at, shipped_at, shipping_address, payment_method) VALUES (1005, 42.00, 'delivered', '2025-04-25 09:45:33', '2025-05-09 09:15:00', '12 Grimmauld Place, London', 'Bank Transfer');"
 ----
 
 Observe the new record appear in the Kafka topic:
@@ -287,3 +298,60 @@ Observe the new record appear in the Kafka topic:
         Headers:
 % Reached end of topic orders_cdc [2] at offset 2
 ----
+
+Add more records:
+
+[source,sql]
+----
+INSERT INTO orders (customer_id, total_amount, status, created_at, shipped_at, shipping_address, payment_method) VALUES (1002, 89.95, 'processing','2025-04-25 09:45:38', NULL, '742 Evergreen Terrace, Springfield', 'PayPal');
+INSERT INTO orders (customer_id, total_amount, status, created_at, shipped_at, shipping_address, payment_method) VALUES (1004, 125.50, 'delivered', '2025-04-25 09:46:03','2025-04-15 14:30:00', '31 Spooner Street, Quahog', 'Credit Card');
+----
+
+=== Exploring Watermarks
+
+[source,sql]
+----
+CREATE TABLE `orders_kafka` (
+    `order_id` INT NOT NULL,
+    `customer_id` INT,
+    `total_amount` DECIMAL(10, 2),
+    `status` VARCHAR(2147483647),
+    `created_at` TIMESTAMP(3),
+    `shipped_at` TIMESTAMP(3),
+    `shipping_address` VARCHAR(2147483647),
+    `payment_method` VARCHAR(2147483647),
+    `topic_partition` INT METADATA FROM 'partition',
+    WATERMARK FOR `created_at` AS `created_at` - INTERVAL '5' SECOND,
+    CONSTRAINT `PK_order_id` PRIMARY KEY (`order_id`) NOT ENFORCED
+) WITH (
+    'properties.bootstrap.servers' = 'broker:9092',
+    'connector' = 'upsert-kafka',
+    'value.format' = 'json',
+    'key.format' = 'json',
+    'topic' = 'orders_cdc',
+    'scan.watermark.idle-timeout' = '30 sec'
+);
+----
+
+== Access Postgres container from the internet with ngrok
+
+Make sure that you've configured the `NGROK_AUTHTOKEN` environment variable in the `.env` file.
+
+The `ngrok` container will expose the Postgres container to the internet via a public URL.
+You can find the URL using:
+
+. curl and jq:
++
+[source,bash]
+----
+$ curl -s http://localhost:4040/api/tunnels/command_line | jq '.public_url'
+"tcp://2.tcp.eu.ngrok.io:18063"
+----
+. Use the ngrok CLI to list the tunnel
++
+[source,bash]
+----
+$ docker compose logs ngrok|grep "started tunnel"
+ngrok  | t=2025-04-17T12:48:08+0000 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=//postgres:5432 url=tcp://2.tcp.eu.ngrok.io:18063
+----
+. View the ngrok dashboard at http://localhost:4040.
