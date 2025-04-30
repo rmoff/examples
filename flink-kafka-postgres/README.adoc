@@ -332,26 +332,3 @@ CREATE TABLE `orders_kafka` (
     'scan.watermark.idle-timeout' = '30 sec'
 );
 ----
-
-== Access Postgres container from the internet with ngrok
-
-Make sure that you've configured the `NGROK_AUTHTOKEN` environment variable in the `.env` file.
-
-The `ngrok` container will expose the Postgres container to the internet via a public URL.
-You can find the URL using:
-
-. curl and jq:
-+
-[source,bash]
-----
-$ curl -s http://localhost:4040/api/tunnels/command_line | jq '.public_url'
-"tcp://2.tcp.eu.ngrok.io:18063"
-----
-. Use the ngrok CLI to list the tunnel
-+
-[source,bash]
-----
-$ docker compose logs ngrok|grep "started tunnel"
-ngrok  | t=2025-04-17T12:48:08+0000 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=//postgres:5432 url=tcp://2.tcp.eu.ngrok.io:18063
-----
-. View the ngrok dashboard at http://localhost:4040.
