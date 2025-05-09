@@ -1,4 +1,4 @@
-FROM apache/flink:1.20.1-java17
+FROM apache/flink:2.0.0-java21
 SHELL ["/bin/bash", "-c"]
 
 # Install some useful tools
@@ -10,13 +10,13 @@ RUN echo "Purge apt artifacts" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget https://github.com/duckdb/duckdb/releases/download/v1.2.1/duckdb_cli-linux-amd64.zip \
-    && unzip duckdb_cli-linux-amd64.zip -d /usr/local/bin \
-    && rm duckdb_cli-linux-amd64.zip
-
 USER flink
 
 WORKDIR /opt/flink
 
-# Set the launch command
-CMD ./bin/start-cluster.sh && sleep infinity
+# Install JARs
+
+RUN echo "-> Install JARs" && \
+    mkdir -p ./lib/jdbc && pushd $_ && \
+    curl https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/4.0.0-2.0/flink-sql-connector-kafka-4.0.0-2.0.jar -O && \
+    popd
