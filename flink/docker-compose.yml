@@ -1,9 +1,9 @@
 ---
 services:
   jobmanager:
-    build: 
-      context: flink
-      dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: flink.Dockerfile
     hostname: jobmanager
     container_name: jobmanager
     ports:
@@ -17,9 +17,9 @@ services:
     volumes:
       - $PWD/data:/data
   taskmanager:
-    build: 
-      context: flink
-      dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: flink.Dockerfile
     depends_on:
       - jobmanager
     command: taskmanager
@@ -32,4 +32,3 @@ services:
       taskmanager.numberOfTaskSlots: 4
     volumes:
       - $PWD/data:/data
-
