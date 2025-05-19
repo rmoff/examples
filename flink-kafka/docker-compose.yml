@@ -31,6 +31,8 @@ services:
       FLINK_PROPERTIES=
       jobmanager.rpc.address: jobmanager
       rest.flamegraph.enabled: true
+    volumes:
+      - $PWD/data:/data
   taskmanager:
     build:
       context: .
@@ -44,6 +46,7 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 8
+      - $PWD/data:/data
 
   kcat:
     image: edenhill/kcat:1.7.1
