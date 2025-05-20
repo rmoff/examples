@@ -18,12 +18,12 @@ CREATE TABLE customers (
     customer_id STRING,
     name STRING,
     city STRING,
-    epoch_ts AS TO_TIMESTAMP(FROM_UNIXTIME(0)),
-    WATERMARK FOR epoch_ts AS epoch_ts,
+    valid_from TIMESTAMP(3),
+    WATERMARK FOR valid_from AS valid_from,
     PRIMARY KEY (customer_id) NOT ENFORCED
 ) WITH (
     'connector' = 'upsert-kafka',
-    'topic' = 'customers',
+    'topic' = 'customers_upsert',
     'properties.bootstrap.servers' = 'broker:9092',
     'key.format' = 'json',
     'value.format' = 'json',
