@@ -1,0 +1,8 @@
+[source,bash]
+----
+docker compose up
+docker compose exec -it postgres psql --u postgres
+docker compose exec -it duckdb ./duckdb
+----
+
+
