@@ -1,0 +1,21 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:17
+    environment:
+      - POSTGRES_PASSWORD=Welcome123
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
+  duckdb:
+    container_name: duckdb
+    image: datacatering/duckdb:v1.3.0
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while [ 1 -eq 1 ];do sleep 60;done
+    volumes:
+      - ./duckdb-data:/data
+    depends_on:
+      - postgres
