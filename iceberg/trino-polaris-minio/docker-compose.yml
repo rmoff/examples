@@ -17,10 +17,34 @@ services:
       polaris.features.DROP_WITH_PURGE_ENABLED: true # allow dropping tables from the SQL client
       polaris.realm-context.realms: default-realm
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8181/healthcheck"]
+      test: ["CMD", "curl", "http://localhost:8182/healthcheck"]
       interval: 5s
       timeout: 10s
       retries: 5
+
+  polaris-config:
+    image: alpine/httpie:latest
+    depends_on:
+      polaris:
+        condition: service_healthy
+    networks:
+      - local-iceberg-lakehouse
+    volumes:
+      - $PWD:/data/
+    entrypoint: >
+      /bin/sh -c '
+      set -e;
+      echo "Waiting for Polaris to be ready...";
+      until http GET http://polaris:8182/healthcheck > /dev/null 2>&1; do
+        sleep 2;
+      done;
+      echo "Polaris is ready.";
+      echo "Running setup.";
+      /data/setup.sh;
+
+      echo "Polaris configured successfully. Container will stay up for monitoring.";
+      tail -f /dev/null;
+      '
 
   trino:
     image: trinodb/trino:latest
