@@ -29,8 +29,6 @@ CREATE TABLE customers (
 );
 ----
 
-See
-
 == List the objects on MinIO:
 
 [source,bash]
@@ -38,21 +36,11 @@ See
 docker compose exec minio-client mc ls -r minio/warehouse/db
 ----
 
-== Add a Spark
-
-[source,bash]
-----
-docker run -it --rm --name spark-iceberg \
-  --network local-iceberg-lakehouse \
-  --env AWS_ACCESS_KEY_ID=admin \
-  --env AWS_SECRET_ACCESS_KEY=password \
-  --env AWS_REGION=us-east-1 \
-  -p 8888:8888 \
-  -v $PWD/notebooks:/home/iceberg/notebooks \
-  tabulario/spark-iceberg
-----
+== Jupyter notebook / Spark
 
 Launch Jupyter at http://127.0.0.1:8888/notebooks/Iceberg%20Polaris%20Spark.ipynb
+
+See also https://github.com/apache/polaris/blob/main/getting-started/spark/notebooks/SparkPolaris.ipynb
 
 [source, ipython3]
 ----
