@@ -1,7 +1,7 @@
 services:
 
   polaris:
-    image: apache/polaris:latest
+    image: apache/polaris:1.0.0-incubating
     platform: linux/amd64
     ports:
       - "8181:8181"
@@ -95,6 +95,21 @@ services:
       mc anonymous set public minio/warehouse;
       tail -f /dev/null
       "
+
+  spark-iceberg:
+# docker compose exec spark-iceberg bash -c "apt-get update && apt-get install -y pandoc"
+    image: tabulario/spark-iceberg
+    container_name: spark-iceberg
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    networks:
+      - local-iceberg-lakehouse
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/iceberg/notebooks
 
 networks:
   local-iceberg-lakehouse:
