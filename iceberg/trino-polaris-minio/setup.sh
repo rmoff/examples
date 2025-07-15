@@ -55,6 +55,11 @@ http --ignore-stdin PUT http://polaris:8181/api/management/v1/principals/root/pr
   "Authorization: Bearer $ACCESS_TOKEN" \
   principalRole:='{"name":"data_engineer"}'
 
-
 echo "Check security"
 http GET http://polaris:8181/api/management/v1/principals/root/principal-roles "Authorization: Bearer $ACCESS_TOKEN"
+
+echo "Creating namespace 'rmoff'..."
+http --ignore-stdin POST http://polaris:8181/api/catalog/v1/polariscatalog/namespaces \
+  "Authorization: Bearer $ACCESS_TOKEN" \
+  "Content-Type: application/json" \
+  namespace:='["rmoff"]'
