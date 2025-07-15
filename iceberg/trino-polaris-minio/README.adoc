@@ -1,6 +1,9 @@
-= Iceberg, Polaris, Minio, Trino
+= Iceberg + Polaris + MinIO + Trino + Spark == FUN 🥳
 
 Kudos to my colleague Gilles Philippart for building this! Read more on his https://medium.com/@gilles.philippart/349c534ecd98[excellent blog post].
+
+image::overview.excalidraw.png[]
+
 
 == Setup
 
@@ -9,132 +12,36 @@ Kudos to my colleague Gilles Philippart for building this! Read more on his http
 docker compose up
 ----
 
-== Using it
+* Trino
++
+Web UI for monitoring: http://localhost:8080 (login: `admin`)
++
+SQL client: `docker compose exec trino trino --server localhost:8080 --catalog iceberg`
 
-[source,bash]
-----
-docker compose exec -it trino trino --server localhost:8080 --catalog iceberg
-----
+* Jupyter notebook w/Spark
++
+http://localhost:8888/notebooks
 
-[source,sql]
-----
-CREATE SCHEMA db;
-USE db;
+* MinIO
++
+Web UI: http://localhost:9000 (login: `admin` / `password`)
++
+CLI: `docker compose exec minio-client mc`
++
+e.g.
+`docker compose exec minio-client mc ls -r minio/warehouse/db`
 
-CREATE TABLE customers (
-  customer_id BIGINT,
-  first_name VARCHAR,
-  last_name VARCHAR,
-  email VARCHAR
-);
-----
+* Polaris
++
+No UI, but you can use Nimtable for WebUI, or use the API directly.
++
+The `polaris-config` container configures Polaris using the `setup.sh` script to set up security and create an initial namespace.
 
-== List the objects on MinIO:
-
-[source,bash]
-----
-docker compose exec minio-client mc ls -r minio/warehouse/db
-----
-
-== Jupyter notebook / Spark
-
-Launch Jupyter at http://127.0.0.1:8888/notebooks/Iceberg%20Polaris%20Spark.ipynb
-
-See also https://github.com/apache/polaris/blob/main/getting-started/spark/notebooks/SparkPolaris.ipynb
-
-[source, ipython3]
-----
-# h/t https://www.dremio.com/blog/getting-hands-on-with-polaris-oss-apache-iceberg-and-apache-spark/
-import pyspark
-from pyspark.sql import SparkSession
-import os
-
-## DEFINE SENSITIVE VARIABLES
-POLARIS_URI = 'http://polaris:8181/api/catalog'
-POLARIS_CATALOG_NAME = 'polariscatalog'
-POLARIS_CREDENTIALS = 'root:secret'
-POLARIS_SCOPE = 'PRINCIPAL_ROLE:ALL'
-
-conf = (
-    pyspark.SparkConf()
-        .setAppName('rmoff')
-  		#packages
-        .set('spark.jars.packages', 'org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2,org.apache.hadoop:hadoop-aws:3.4.0')
-  		#SQL Extensions
-        .set('spark.sql.extensions', 'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions')
-  		#Configuring Catalog
-        .set('spark.sql.catalog.polaris', 'org.apache.iceberg.spark.SparkCatalog')
-        .set('spark.sql.catalog.polaris.warehouse', POLARIS_CATALOG_NAME)
-        .set('spark.sql.catalog.polaris.header.X-Iceberg-Access-Delegation', 'true')
-        .set('spark.sql.catalog.polaris.catalog-impl', 'org.apache.iceberg.rest.RESTCatalog')
-        .set('spark.sql.catalog.polaris.uri', POLARIS_URI)
-        .set('spark.sql.catalog.polaris.credential', POLARIS_CREDENTIALS)
-        .set('spark.sql.catalog.polaris.scope', POLARIS_SCOPE)
-        .set('spark.sql.catalog.polaris.token-refresh-enabled', 'true')
-        .set('spark.sql.defaultCatalog', 'polaris')
-)
-
-## Start Spark Session
-spark = SparkSession.builder.config(conf=conf).getOrCreate()
-print("Spark Running")
-----
-
-[source, ipython3]
-----
-spark.sql("CREATE NAMESPACE IF NOT EXISTS polaris.db")
-spark.sql("SHOW DATABASES IN polaris").show()
-----
-
-----
-+---------+
-|namespace|
-+---------+
-|       db|
-|    rmoff|
-+---------+
-----
-
-[source, sql]
-----
-%%sql
--- Could also be polaris.db if used the Trino example already
-USE polaris.rmoff;
-----
-
-[source, sql]
-----
-%%sql
-    CREATE TABLE IF NOT EXISTS customers (
-  customer_id BIGINT,
-  first_name VARCHAR(255),
-  last_name VARCHAR(255),
-  email VARCHAR(255)
-);
-----
-
-[source, sql]
-----
-%%sql
-
-INSERT INTO customers (customer_id, first_name, last_name, email)
-VALUES (1, 'Rey', 'Skywalker', 'rey@rebelscum.org'),
-       (2, 'Hermione', 'Granger', 'hermione@hogwarts.edu'),
-       (3, 'Tony', 'Stark', 'tony@starkindustries.com');
-----
+* Nimtable
++
+Web UI: http://localhost:13000 (login: `admin` / `admin`)
 
 
-[source, sql]
-----
-%%sql
+== More details
 
-SELECT * FROM customers;
-----
-
-
-[cols=",,,",options="header",]
-|===
-|customer_id |first_name |last_name |email
-|1 |Rey |Skywalker |rey@rebelscum.org
-|2 |Hermione |Granger |hermione@hogwarts.edu
-|3 |Tony |Stark |tony@starkindustries.com
-|===
+See https://rmoff.net/2025/07/14/keeping-your-data-lakehouse-in-order-table-maintenance-in-apache-iceberg/[Keeping your Data Lakehouse in Order: Table Maintenance in Apache Iceberg]
