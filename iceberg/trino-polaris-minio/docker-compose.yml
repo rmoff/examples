@@ -117,23 +117,6 @@ services:
     volumes:
       - ./notebooks:/home/iceberg/notebooks
 
-  amoro:
-    image: apache/amoro
-    container_name: amoro
-    ports:
-      - 8081:8081
-      - 1630:1630
-      - 1260:1260
-    environment:
-      - JVM_XMS=1024
-    networks:
-      - local-iceberg-lakehouse
-    volumes:
-      - ./amoro:/tmp/warehouse
-    command: ["/entrypoint.sh", "ams"]
-    tty: true
-    stdin_open: true
-
   nimtable-web:
     image: ghcr.io/nimtable/nimtable-web:nightly
     restart: unless-stopped
