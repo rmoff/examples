@@ -43,8 +43,14 @@ services:
       /data/setup.sh;
 
       echo "Polaris configured successfully. Container will stay up for monitoring.";
+      touch /tmp/setup-completed;
       tail -f /dev/null;
       '
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /tmp/setup-completed ]"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   trino:
     image: trinodb/trino:latest
@@ -110,6 +116,111 @@ services:
       - "8888:8888"
     volumes:
       - ./notebooks:/home/iceberg/notebooks
+
+  amoro:
+    image: apache/amoro
+    container_name: amoro
+    ports:
+      - 8081:8081
+      - 1630:1630
+      - 1260:1260
+    environment:
+      - JVM_XMS=1024
+    networks:
+      - local-iceberg-lakehouse
+    volumes:
+      - ./amoro:/tmp/warehouse
+    command: ["/entrypoint.sh", "ams"]
+    tty: true
+    stdin_open: true
+
+  nimtable-web:
+    image: ghcr.io/nimtable/nimtable-web:nightly
+    restart: unless-stopped
+    ports:
+      - "13000:3000"
+    environment:
+      - JAVA_API_URL=http://nimtable:8182
+      - DATABASE_URL=postgresql://nimtable_user:password@nimtable-database:5432/nimtable
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+    depends_on:
+      - nimtable
+    networks:
+      - local-iceberg-lakehouse
+
+  # Backend application
+  nimtable:
+    image: ghcr.io/nimtable/nimtable:nightly
+    restart: unless-stopped
+    depends_on:
+      nimtable-database:
+        condition: service_healthy
+      polaris-config:
+        condition: service_healthy
+    ports:
+      - "18182:8182"
+    # Mount configuration files
+    configs:
+      - source: config.yaml
+        target: /nimtable/config.yaml
+    environment:
+      JAVA_OPTS: -Xmx32g -Xms512m
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: dummy-region
+      AWS_ENDPOINT_URL_S3: http://minio:9000
+    networks:
+      - local-iceberg-lakehouse
+
+  # Database to persist nimtable data.
+  # Make sure the setting in config.yaml is consistent with this.
+  nimtable-database:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nimtable_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: nimtable
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nimtable_user -d nimtable"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - local-iceberg-lakehouse
+
+
+volumes:
+  nimtable-data-postgres:
+
+configs:
+  config.yaml:
+    content: |
+      # Nimtable config file to be mounted into the Docker containers.
+      # See backend/config.yaml for more complete example
+      server:
+        port: 8182
+        host: 0.0.0.0
+      database:
+        # You can also point to your own Postgres database, instead of using the one provided by docker-compose.
+        url: jdbc:postgresql://nimtable-database:5432/nimtable
+        username: nimtable_user
+        password: password
+      catalogs:
+        - name: polaris
+          type: rest
+          uri: http://polaris:8181/api/catalog/
+          warehouse: polariscatalog
+          io-impl: org.apache.iceberg.aws.s3.S3FileIO
+          s3.endpoint: http://minio:9000
+          s3.access-key-id: admin
+          s3.secret-access-key: password
+          s3.region: us-east-1
+          s3.path-style-access: true
+          credential: root:secret
+          scope: PRINCIPAL_ROLE:ALL
 
 networks:
   local-iceberg-lakehouse:
