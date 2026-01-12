@@ -8,6 +8,8 @@ A bare-bones Apache Iceberg environment for local development and testing.
 - **Iceberg REST Catalog** - Lightweight catalog service
 - **DuckDB** - Query engine with Iceberg support
 
+![](minio01.excalidraw.png)
+
 ## Quick Start
 
 ```bash
