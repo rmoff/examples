@@ -1,0 +1,103 @@
+services:
+  garage:
+    image: dxflrs/garage:v1.0.0
+    ports:
+      - "9000:3900"
+      - "9001:3902"
+    environment:
+      GARAGE_RPC_SECRET: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    command: /garage -c /etc/garage.toml server
+    configs:
+      - source: garage-config
+        target: /etc/garage.toml
+    healthcheck:
+      test: ["CMD", "/garage", "-c", "/etc/garage.toml", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  garage-init:
+    image: alpine:latest
+    depends_on:
+      garage:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache docker-cli;
+      CONTAINER=$$(docker ps --filter name=garage-garage-1 --format '{{.Names}}');
+      NODE_ID=$$(docker exec $$CONTAINER /garage -c /etc/garage.toml status 2>/dev/null | grep 'NO ROLE ASSIGNED' | awk '{print \$$1}');
+      if [ ! -z \"$$NODE_ID\" ]; then
+        docker exec $$CONTAINER /garage -c /etc/garage.toml layout assign -z dc1 -c 10G $$NODE_ID;
+        docker exec $$CONTAINER /garage -c /etc/garage.toml layout apply --version 1;
+        sleep 2;
+      fi;
+      docker exec $$CONTAINER /garage -c /etc/garage.toml key import -n admin --yes GKb69252a3b0643e8bd08d4cd4 9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93 2>/dev/null || true;
+      docker exec $$CONTAINER /garage -c /etc/garage.toml bucket create warehouse 2>/dev/null || true;
+      docker exec $$CONTAINER /garage -c /etc/garage.toml bucket allow --read --write warehouse --key GKb69252a3b0643e8bd08d4cd4;
+      echo 'Garage initialization complete';
+      "
+
+  mc:
+    image: minio/mc:latest
+    depends_on:
+      garage-init:
+        condition: service_completed_successfully
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set garage http://garage:3900 GKb69252a3b0643e8bd08d4cd4 9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93 --insecure) do echo '...waiting...' && sleep 1; done;
+      echo 'Garage is ready for S3 operations';
+      tail -f /dev/null
+      "
+
+  iceberg-rest:
+    image: tabulario/iceberg-rest:latest
+    depends_on:
+      mc:
+        condition: service_started
+    ports:
+      - "8181:8181"
+    environment:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: GKb69252a3b0643e8bd08d4cd4
+      AWS_SECRET_ACCESS_KEY: 9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://garage:3900
+      CATALOG_S3_ACCESS__KEY__ID: GKb69252a3b0643e8bd08d4cd4
+      CATALOG_S3_SECRET__ACCESS__KEY: 9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_S3_REGION: us-east-1
+
+  duckdb:
+    image: duckdb/duckdb:latest
+    depends_on:
+      - iceberg-rest
+    stdin_open: true
+    tty: true
+
+configs:
+  garage-config:
+    content: |
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir = "/var/lib/garage/data"
+      db_engine = "sqlite"
+      replication_mode = "none"
+      rpc_bind_addr = "[::]:3901"
+      rpc_secret = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+
+      [s3_api]
+      s3_region = "us-east-1"
+      api_bind_addr = "[::]:3900"
+      root_domain = ".s3.garage"
+
+      [s3_web]
+      bind_addr = "[::]:3902"
+      root_domain = ".web.garage"
+
+      [admin]
+      api_bind_addr = "[::]:3903"
+
+      [k2v_api]
+      api_bind_addr = "0.0.0.0:3904"

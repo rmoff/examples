@@ -7,7 +7,7 @@ echo "    ▒                                                      ▒"
 echo "    ▓      ___                    ▓▓▓▓▓                    ▓"
 echo "    █  ___( o)>  ┌───────────┐  ▓▓▓▓▓▓▓  ▒▒▒▒▒▒▒           █"
 echo "    █  \\ <_. )   │  DUCKDB   │  ▓░Local S3 ░▓  ▒▒▒▒        █"
-echo "    █   \`---'    └───────────┘   ▓▓▓▓▓▓▓   ▒▒▒             █"
+echo "    █   \`---'    └───────────┘   ▓▓ MinIO  ▒▒▒             █"
 echo "    ▓           ┏━━━━━━━━━━━━━┓        ░░░                 ▓"
 echo "    ▒  ≋≋≋≋≋≋≋  ┃  ICEBERG    ┃  ≋≋≋≋≋≋≋≋  Smoke test      ▒"
 echo "    ░  ≋≋≋≋≋≋≋  ┗━━━━━━━━━━━━━┛  ≋≋≋≋≋≋≋≋                  ░"
@@ -74,4 +74,3 @@ echo ""
 echo "4. Checking MinIO bucket contents (after)..."
 docker compose exec mc mc ls --recursive minio/warehouse/test/products/ | head -10
 echo ""
-

@@ -7,15 +7,15 @@ echo "    ▒                                                      ▒"
 echo "    ▓      ___                    ▓▓▓▓▓                    ▓"
 echo "    █  ___( o)>  ┌───────────┐  ▓▓▓▓▓▓▓  ▒▒▒▒▒▒▒           █"
 echo "    █  \\ <_. )   │  DUCKDB   │  ▓░Local S3 ░▓  ▒▒▒▒        █"
-echo "    █   \`---'    └───────────┘   ▓▓ RustFS ▒▒▒             █"
+echo "    █   \`---'    └───────────┘   ▓▓ Garage ▒▒▒             █"
 echo "    ▓           ┏━━━━━━━━━━━━━┓        ░░░                 ▓"
 echo "    ▒  ≋≋≋≋≋≋≋  ┃  ICEBERG    ┃  ≋≋≋≋≋≋≋≋  Smoke test      ▒"
 echo "    ░  ≋≋≋≋≋≋≋  ┗━━━━━━━━━━━━━┛  ≋≋≋≋≋≋≋≋                  ░"
 echo "    ░▒▓██████████████████████████████████████████████████▓▒░"
 echo ""
 
-echo "1. Checking MinIO buckets (before)..."
-docker compose exec mc mc ls minio
+echo "1. Checking Garage buckets (before)..."
+docker compose exec garage /garage -c /etc/garage.toml bucket list
 echo ""
 
 echo "2. Creating Iceberg table and inserting data..."
@@ -28,10 +28,10 @@ LOAD httpfs;
 -- Configure S3
 CREATE SECRET s3_secret (
     TYPE S3,
-    KEY_ID 'admin',
-    SECRET 'password',
+    KEY_ID 'GKb69252a3b0643e8bd08d4cd4',
+    SECRET '9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93',
     REGION 'us-east-1',
-    ENDPOINT 'minio:9000',
+    ENDPOINT 'garage:3900',
     USE_SSL false,
     URL_STYLE 'path'
 );
@@ -64,13 +64,13 @@ INSTALL iceberg;
 INSTALL httpfs;
 LOAD iceberg;
 LOAD httpfs;
-CREATE SECRET s3_secret (TYPE S3, KEY_ID 'admin', SECRET 'password', REGION 'us-east-1', ENDPOINT 'minio:9000', USE_SSL false, URL_STYLE 'path');
+CREATE SECRET s3_secret (TYPE S3, KEY_ID 'GKb69252a3b0643e8bd08d4cd4', SECRET '9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93', REGION 'us-east-1', ENDPOINT 'garage:3900', USE_SSL false, URL_STYLE 'path');
 CREATE SECRET iceberg_secret (TYPE iceberg, TOKEN 'dummy');
 ATTACH 'warehouse' AS cat (TYPE iceberg, ENDPOINT 'http://iceberg-rest:8181', SECRET iceberg_secret);
 SELECT * FROM cat.test.products ORDER BY id;
 "
 echo ""
 
-echo "4. Checking MinIO bucket contents (after)..."
-docker compose exec mc mc ls --recursive minio/warehouse/test/products/ | head -10
+echo "4. Listing bucket objects with mc..."
+docker compose exec mc mc ls --recursive garage/warehouse/
 echo ""
