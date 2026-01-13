@@ -1,6 +1,6 @@
 services:
   minio:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.6.40
     ports:
       - "9000:9000"
       - "9001:9001"

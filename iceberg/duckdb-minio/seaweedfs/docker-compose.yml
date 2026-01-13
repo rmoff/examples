@@ -1,6 +1,6 @@
 services:
   seaweedfs:
-    image: chrislusf/seaweedfs:latest
+    image: chrislusf/seaweedfs:4.06
     ports:
       - "9000:9000"
       - "9001:8888"
