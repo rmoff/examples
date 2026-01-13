@@ -39,8 +39,8 @@ LOAD httpfs;
 -- Configure S3
 CREATE SECRET s3_secret (
     TYPE S3,
-    KEY_ID 'accessKey1',
-    SECRET 'verySecretKey1',
+    KEY_ID 'admin',
+    SECRET 'password',
     REGION 'us-east-1',
     ENDPOINT 'cloudserver:8000',
     USE_SSL false,
@@ -75,7 +75,7 @@ INSTALL iceberg;
 INSTALL httpfs;
 LOAD iceberg;
 LOAD httpfs;
-CREATE SECRET s3_secret (TYPE S3, KEY_ID 'accessKey1', SECRET 'verySecretKey1', REGION 'us-east-1', ENDPOINT 'cloudserver:8000', USE_SSL false, URL_STYLE 'path');
+CREATE SECRET s3_secret (TYPE S3, KEY_ID 'admin', SECRET 'password', REGION 'us-east-1', ENDPOINT 'cloudserver:8000', USE_SSL false, URL_STYLE 'path');
 CREATE SECRET iceberg_secret (TYPE iceberg, TOKEN 'dummy');
 ATTACH 'warehouse' AS cat (TYPE iceberg, ENDPOINT 'http://iceberg-rest:8181', SECRET iceberg_secret);
 SELECT * FROM cat.test.products ORDER BY id;
