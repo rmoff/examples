@@ -1,0 +1,71 @@
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "9000:9000"
+      - "9001:8888"
+    command: server -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -master.port=9333 -volume.port=8080 -filer -filer.port=8888
+    environment:
+      WEED_MASTER_VOLUME_GROWTH_COPY_1: 1
+    configs:
+      - source: s3-config
+        target: /etc/seaweedfs/s3.json
+
+  mc:
+    image: minio/mc:latest
+    depends_on:
+      - seaweedfs
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set seaweedfs http://seaweedfs:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      mc mb -p seaweedfs/warehouse;
+      tail -f /dev/null
+      "
+
+  iceberg-rest:
+    image: tabulario/iceberg-rest:latest
+    depends_on:
+      - mc
+    ports:
+      - "8181:8181"
+    restart: on-failure
+    environment:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://seaweedfs:9000
+      CATALOG_S3_ACCESS__KEY__ID: admin
+      CATALOG_S3_SECRET__ACCESS__KEY: password
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_S3_REGION: us-east-1
+
+  duckdb:
+    image: duckdb/duckdb:latest
+    depends_on:
+      - iceberg-rest
+    stdin_open: true
+    tty: true
+
+configs:
+  s3-config:
+    content: |
+      {
+        "identities": [
+          {
+            "name": "anonymous",
+            "credentials": [
+              {
+                "accessKey": "admin",
+                "secretKey": "password"
+              }
+            ],
+            "actions": [
+              "Admin",
+              "Read",
+              "Write"
+            ]
+          }
+        ]
+      }
