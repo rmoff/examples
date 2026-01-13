@@ -46,16 +46,15 @@ services:
         condition: service_completed_successfully
     entrypoint: >
       /bin/sh -c "
-      until (mc alias set garage http://garage:3900 GKb69252a3b0643e8bd08d4cd4 9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93 --insecure) do echo '...waiting...' && sleep 1; done;
-      echo 'Garage is ready for S3 operations';
+      mc alias set garage http://garage:3900 GKb69252a3b0643e8bd08d4cd4 9115be9c9e4994306a4176543b0db461f4eb04c5c8a388676d1b57392d0f4e93 --insecure;
       tail -f /dev/null
       "
 
   iceberg-rest:
     image: tabulario/iceberg-rest:latest
     depends_on:
-      mc:
-        condition: service_started
+      garage-init:
+        condition: service_completed_successfully
     ports:
       - "8181:8181"
     environment:
