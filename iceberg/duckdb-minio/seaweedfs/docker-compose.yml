@@ -2,11 +2,9 @@ services:
   seaweedfs:
     image: chrislusf/seaweedfs:4.06
     ports:
-      - "9000:9000"
-      - "9001:8888"
+      - "9333:9333"
+      - "8888:8888"
     command: server -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -master.port=9333 -volume.port=8080 -filer -filer.port=8888
-    environment:
-      WEED_MASTER_VOLUME_GROWTH_COPY_1: 1
     configs:
       - source: s3-config
         target: /etc/seaweedfs/s3.json
@@ -51,21 +49,4 @@ services:
 configs:
   s3-config:
     content: |
-      {
-        "identities": [
-          {
-            "name": "anonymous",
-            "credentials": [
-              {
-                "accessKey": "admin",
-                "secretKey": "password"
-              }
-            ],
-            "actions": [
-              "Admin",
-              "Read",
-              "Write"
-            ]
-          }
-        ]
-      }
+      { "identities": [ { "name": "anonymous", "credentials": [ { "accessKey": "admin", "secretKey": "password" } ], "actions": [ "Admin", "Read", "Write" ] } ] }
