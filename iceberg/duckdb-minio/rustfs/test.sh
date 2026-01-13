@@ -31,7 +31,7 @@ CREATE SECRET s3_secret (
     KEY_ID 'admin',
     SECRET 'password',
     REGION 'us-east-1',
-    ENDPOINT 'minio:9000',
+    ENDPOINT 'rustfs:9000',
     USE_SSL false,
     URL_STYLE 'path'
 );
@@ -64,13 +64,13 @@ INSTALL iceberg;
 INSTALL httpfs;
 LOAD iceberg;
 LOAD httpfs;
-CREATE SECRET s3_secret (TYPE S3, KEY_ID 'admin', SECRET 'password', REGION 'us-east-1', ENDPOINT 'minio:9000', USE_SSL false, URL_STYLE 'path');
+CREATE SECRET s3_secret (TYPE S3, KEY_ID 'admin', SECRET 'password', REGION 'us-east-1', ENDPOINT 'rustfs:9000', USE_SSL false, URL_STYLE 'path');
 CREATE SECRET iceberg_secret (TYPE iceberg, TOKEN 'dummy');
 ATTACH 'warehouse' AS cat (TYPE iceberg, ENDPOINT 'http://iceberg-rest:8181', SECRET iceberg_secret);
 SELECT * FROM cat.test.products ORDER BY id;
 "
 echo ""
 
-echo "4. Checking MinIO bucket contents (after)..."
-docker compose exec mc mc ls --recursive minio/warehouse/test/products/ | head -10
+echo "4. Checking RustFS bucket contents (after)..."
+docker compose exec mc mc ls --recursive rustfs/warehouse/test/products/ | head -10
 echo ""
