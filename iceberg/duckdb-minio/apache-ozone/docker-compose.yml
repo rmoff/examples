@@ -1,0 +1,111 @@
+services:
+  scm:
+    image: apache/ozone:2.1.0
+    ports:
+      - "9876:9876"
+    environment:
+      OZONE-SITE.XML_ozone.scm.names: scm
+      OZONE-SITE.XML_ozone.scm.datanode.id.dir: /data/metadata
+      OZONE-SITE.XML_ozone.scm.block.client.address: scm
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.metadata.dirs: /data/metadata
+      OZONE-SITE.XML_ozone.replication: "1"
+      OZONE-SITE.XML_hdds.scm.safemode.min.datanode: "1"
+      ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+    command: ["ozone", "scm"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9876/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  om:
+    image: apache/ozone:2.1.0
+    ports:
+      - "9874:9874"
+    environment:
+      OZONE-SITE.XML_ozone.om.address: om
+      OZONE-SITE.XML_ozone.om.http-address: om:9874
+      OZONE-SITE.XML_ozone.scm.names: scm
+      OZONE-SITE.XML_ozone.scm.block.client.address: scm
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.metadata.dirs: /data/metadata
+      OZONE-SITE.XML_ozone.replication: "1"
+      ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
+      WAITFOR: scm:9876
+    command: ["ozone", "om"]
+    depends_on:
+      scm:
+        condition: service_healthy
+
+  datanode:
+    image: apache/ozone:2.1.0
+    ports:
+      - "9864:9864"
+    environment:
+      OZONE-SITE.XML_hdds.datanode.dir: /data/hdds
+      OZONE-SITE.XML_ozone.metadata.dirs: /data/metadata
+      OZONE-SITE.XML_ozone.scm.names: scm
+      OZONE-SITE.XML_ozone.scm.block.client.address: scm
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.replication: "1"
+    command: ["ozone", "datanode"]
+    depends_on:
+      scm:
+        condition: service_healthy
+
+  s3g:
+    image: apache/ozone:2.1.0
+    ports:
+      - "9878:9878"
+    environment:
+      OZONE-SITE.XML_ozone.om.address: om
+      OZONE-SITE.XML_ozone.scm.names: scm
+      OZONE-SITE.XML_ozone.scm.block.client.address: scm
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.replication: "1"
+    command: ["ozone", "s3g"]
+    depends_on:
+      scm:
+        condition: service_healthy
+      om:
+        condition: service_started
+      datanode:
+        condition: service_started
+
+  mc:
+    image: minio/mc:latest
+    depends_on:
+      - s3g
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      until (mc alias set ozone http://s3g:9878 admin password) do echo '...waiting...' && sleep 1; done;
+      mc mb -p ozone/warehouse;
+      tail -f /dev/null
+      "
+
+  iceberg-rest:
+    image: tabulario/iceberg-rest:latest
+    depends_on:
+      - mc
+    ports:
+      - "8181:8181"
+    environment:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://s3g:9878
+      CATALOG_S3_ACCESS__KEY__ID: admin
+      CATALOG_S3_SECRET__ACCESS__KEY: password
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_S3_REGION: us-east-1
+
+  duckdb:
+    image: duckdb/duckdb:latest
+    depends_on:
+      - iceberg-rest
+    stdin_open: true
+    tty: true
