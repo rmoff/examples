@@ -2,7 +2,7 @@
 
 NOTE: This doc was written by Claude Code (Opus 4.6) about troubleshooting the connector during testing
 
-See [README](README.md) for details on running the test.
+See below for details on running the test and [README](README.md) also.
 
 ---
 
