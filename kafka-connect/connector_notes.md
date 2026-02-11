@@ -2,6 +2,8 @@
 
 NOTE: This doc was written by Claude Code (Opus 4.6) about troubleshooting the connector during testing
 
+See [README](README.md) for details on running the test.
+
 ---
 
 The connector works correctly but has a **critical requirement for continuous data flow**. This commonly trips up users during initial testing/evaluation when they send a few test records and expect immediate results.
@@ -203,6 +205,8 @@ JoinGroup failed: The coordinator is not aware of this member.
 - Kafka Connect: Confluent Platform 8.0.3
 - Catalog: REST catalog
 - Storage: S3-compatible (SeaweedFS)
+
+See [https://github.com/rmoff/examples/main/kafka-connect](https://github.com/rmoff/examples/tree/main/kafka-connect)
 
 ### Continuous Data Test Results
 
