@@ -83,8 +83,8 @@ services:
       - bash
       - -c
       - |
-        echo "Installing Apache Iceberg Connector 1.9.2"
-        confluent-hub install --no-prompt /tmp/iceberg-kafka-connect-1.9.2.zip
+        echo "Installing Apache Iceberg Connector"
+        confluent-hub install --no-prompt iceberg/iceberg-kafka-connect:1.9.2
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
