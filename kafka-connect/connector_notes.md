@@ -10,9 +10,9 @@ The connector works correctly but has a **critical requirement for continuous da
 
 ### Key Findings
 
-✅ **Connector functions correctly** with continuous data streams
-⚠️ **Requires ongoing data arrival** for Iceberg snapshot commits
-❌ **Appears broken** when tested with static datasets
+* ✅ **Connector functions correctly** with continuous data streams
+* ⚠️ **Requires ongoing data arrival** for Iceberg snapshot commits
+* ❌ **Appears broken** when tested with static datasets
 
 ## The Core Issue: Continuous Data Requirement
 
