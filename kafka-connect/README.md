@@ -2,6 +2,8 @@
 
 Test stack for Apache Iceberg Kafka Connect sink connector.
 
+See also [LLM notes](connector_notes.md) re committing problems.
+
 ## Start the stack
 
 ```bash
